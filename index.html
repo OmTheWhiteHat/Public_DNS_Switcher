@@ -49,11 +49,11 @@
 
 
     .glass-min {
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(0, 0, 0, 0.144);
       border-radius: 16px;
       backdrop-filter: blur(5px);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.075);
     }
 
     .glass {
@@ -172,7 +172,7 @@
   <div class="bg-popup-content glass p-3 rounded-4 text-white border border-info border-opacity-50">
     <h5 class="text-center mb-3">🖼 Select Background</h5>
     <div class="d-flex flex-wrap gap-3 justify-content-center">
-      {% for i in range(1, 7) %}
+      {% for i in range(1, 15) %}
         <img src="{{ url_for('static', filename='bg/' ~ i ~ '.jpg') }}"
              class="bg-thumbnail" alt="bg{{ i }}"
              onclick="setBackground('bg/{{ i }}.jpg')">
