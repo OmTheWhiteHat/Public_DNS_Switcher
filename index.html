@@ -67,6 +67,12 @@
         <a href="/reset" class="btn btn-outline-danger mt-3">Reset to Automatic (DHCP)</a>
         <button class="btn btn-info mt-3" onclick="refreshDNS()">Refresh DNS Info</button>
 <ul class="list-group mt-2" id="dns-display"></ul>
+<form action="/quit" method="get">
+  <button class="btn btn-danger mt-3" onclick="return confirm('Stop the server and reset DNS to default?')">
+    🛑 Stop & Reset DNS
+  </button>
+</form>
+
 
 <script>
   function refreshDNS() {

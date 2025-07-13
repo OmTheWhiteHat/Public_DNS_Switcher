@@ -1,8 +1,12 @@
 # Flask-based real-time Web DNS Switcher (Windows only)
 from flask import Flask, render_template, request, redirect, url_for, flash
 import subprocess
+import threading
+import time
+import sys
 import os
 from dns_provider import dns_list
+import webbrowser
 
 app = Flask(__name__, template_folder='')
 app.secret_key = "supersecretkey"
@@ -13,14 +17,18 @@ def get_network_interfaces():
     interfaces = []
     try:
         output = subprocess.check_output("netsh interface show interface", shell=True, text=True)
-        for line in output.splitlines():
-            if "Connected" in line or "enabled" in line.lower():
-                parts = line.split()
-                if parts:
-                    interfaces.append(parts[-1])
+        lines = output.splitlines()
+        for line in lines:
+            if line.strip().startswith("Enabled") or "Connected" in line:
+                parts = line.strip().split()
+                if len(parts) >= 4:
+                    # Interface name starts after the 3rd token (Admin, State, Type)
+                    iface = " ".join(parts[3:])
+                    interfaces.append(iface.strip('"'))
     except Exception as e:
         print("Interface error:", e)
     return interfaces
+
 
 def set_dns(dns1, dns2):
     try:
@@ -112,7 +120,24 @@ def refresh_dns():
     current_dns = get_current_dns()
     return {"dns": current_dns}
 
+@app.route("/quit")
+def quit_server():
+    def shutdown():
+        try:
+            print("[INFO] Resetting DNS before shutdown...")
+            reset_dns()
+        except Exception as e:
+            print("[ERROR] Failed to reset DNS on quit:", e)
+        time.sleep(1.5)  # Let the response render
+        os._exit(0)      # Kill the server and terminal
+
+    threading.Thread(target=shutdown).start()
+    return "👋 Resetting DNS and shutting down the server. You may close the browser and terminal."
+
+
+
 # ------------------------- Run ----------------------------
 
 if __name__ == "__main__":
+    webbrowser.open("http://localhost:5000")
     app.run(debug=True, port=5000)
