@@ -26,9 +26,14 @@ def set_dns(dns1, dns2):
     try:
         interfaces = get_network_interfaces()
         for iface in interfaces:
-            subprocess.call(f'netsh interface ip set dns name="{iface}" source=static addr={dns1}', shell=True)
-            subprocess.call(f'netsh interface ip add dns name="{iface}" addr={dns2} index=2', shell=True)
+            subprocess.check_call(f'netsh interface ip set dns name="{iface}" source=static addr={dns1}', shell=True)
+            subprocess.check_call(f'netsh interface ip add dns name="{iface}" addr={dns2} index=2', shell=True)
         return True
+    except subprocess.CalledProcessError as e:
+        if "elevation" in str(e).lower():
+            raise PermissionError("Admin rights required.")
+        print("DNS switch error:", e)
+        return False
     except Exception as e:
         print("DNS switch error:", e)
         return False
@@ -37,8 +42,13 @@ def reset_dns():
     try:
         interfaces = get_network_interfaces()
         for iface in interfaces:
-            subprocess.call(f'netsh interface ip set dns name="{iface}" source=dhcp', shell=True)
+            subprocess.check_call(f'netsh interface ip set dns name="{iface}" source=dhcp', shell=True)
         return True
+    except subprocess.CalledProcessError as e:
+        if "elevation" in str(e).lower():
+            raise PermissionError("Admin rights required.")
+        print("Reset error:", e)
+        return False
     except Exception as e:
         print("Reset error:", e)
         return False
@@ -75,20 +85,26 @@ def index():
 def apply_dns():
     dns1 = request.form.get("dns1")
     dns2 = request.form.get("dns2")
-    success = set_dns(dns1, dns2)
-    if success:
-        flash(f"Successfully applied DNS: {dns1}, {dns2}", "success")
-    else:
-        flash("Failed to apply DNS. Run server as Administrator.", "danger")
+    try:
+        success = set_dns(dns1, dns2)
+        if success:
+            flash(f"Successfully applied DNS: {dns1}, {dns2}", "success")
+        else:
+            flash("Failed to apply DNS. Unknown error.", "danger")
+    except PermissionError:
+        flash("❌ Please run this server as Administrator to apply DNS settings.", "danger")
     return redirect(url_for("index"))
 
 @app.route("/reset")
 def reset():
-    success = reset_dns()
-    if success:
-        flash("DNS reset to automatic (DHCP)", "info")
-    else:
-        flash("Failed to reset DNS.", "danger")
+    try:
+        success = reset_dns()
+        if success:
+            flash("DNS reset to automatic (DHCP)", "info")
+        else:
+            flash("Failed to reset DNS.", "danger")
+    except PermissionError:
+        flash("❌ Please run this server as Administrator to reset DNS.", "danger")
     return redirect(url_for("index"))
 
 @app.route("/refresh-dns")
