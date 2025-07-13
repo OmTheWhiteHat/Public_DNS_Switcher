@@ -17,25 +17,33 @@ def get_network_interfaces():
     interfaces = []
     try:
         output = subprocess.check_output("netsh interface show interface", shell=True, text=True)
-        lines = output.splitlines()
+        lines = output.splitlines()[3:]  # Skip header lines
         for line in lines:
-            if line.strip().startswith("Enabled") or "Connected" in line:
-                parts = line.strip().split()
-                if len(parts) >= 4:
-                    # Interface name starts after the 3rd token (Admin, State, Type)
-                    iface = " ".join(parts[3:])
-                    interfaces.append(iface.strip('"'))
+            parts = line.strip().split()
+            if len(parts) >= 4:
+                admin_state = parts[0]
+                state = parts[1]
+                iface_type = parts[2]
+                iface_name = " ".join(parts[3:])
+                interfaces.append({
+                    "admin_state": admin_state,
+                    "state": state,
+                    "type": iface_type,
+                    "name": iface_name
+                })
     except Exception as e:
         print("Interface error:", e)
     return interfaces
+
 
 
 def set_dns(dns1, dns2):
     try:
         interfaces = get_network_interfaces()
         for iface in interfaces:
-            subprocess.check_call(f'netsh interface ip set dns name="{iface}" source=static addr={dns1}', shell=True)
-            subprocess.check_call(f'netsh interface ip add dns name="{iface}" addr={dns2} index=2', shell=True)
+            name = iface['name']  # ✅ extract name
+            subprocess.check_call(f'netsh interface ip set dns name="{name}" source=static addr={dns1}', shell=True)
+            subprocess.check_call(f'netsh interface ip add dns name="{name}" addr={dns2} index=2', shell=True)
         return True
     except subprocess.CalledProcessError as e:
         if "elevation" in str(e).lower():
@@ -46,11 +54,13 @@ def set_dns(dns1, dns2):
         print("DNS switch error:", e)
         return False
 
+
 def reset_dns():
     try:
         interfaces = get_network_interfaces()
         for iface in interfaces:
-            subprocess.check_call(f'netsh interface ip set dns name="{iface}" source=dhcp', shell=True)
+            name = iface['name']  # ✅ extract name
+            subprocess.check_call(f'netsh interface ip set dns name="{name}" source=dhcp', shell=True)
         return True
     except subprocess.CalledProcessError as e:
         if "elevation" in str(e).lower():
@@ -60,6 +70,7 @@ def reset_dns():
     except Exception as e:
         print("Reset error:", e)
         return False
+
 
 def get_current_dns():
     try:
@@ -87,7 +98,10 @@ def get_current_dns():
 @app.route("/")
 def index():
     current_dns = get_current_dns()
-    return render_template("index.html", dns_list=dns_list, current_dns=current_dns)
+    interfaces = get_network_interfaces()
+    return render_template("index.html", dns_list=dns_list, current_dns=current_dns, interfaces=interfaces)
+
+
 
 @app.route("/apply", methods=["POST"])
 def apply_dns():
