@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Switcher</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h2 class="mb-4 text-center">🛡 Public DNS Switcher</h2>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="mb-4">
+            <h5>Current DNS Configuration:</h5>
+            <ul class="list-group">
+                {% for dns in current_dns %}
+                    <li class="list-group-item">{{ dns }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form method="POST" action="/apply">
+            <table class="table table-hover table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Provider</th>
+                        <th>Description</th>
+                        <th>Primary DNS</th>
+                        <th>Secondary DNS</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dns in dns_list %}
+                    <tr>
+                        <td>{{ dns.name }}</td>
+                        <td>{{ dns.desc }}</td>
+                        <td>{{ dns.ips[0] }}</td>
+                        <td>{{ dns.ips[1] }}</td>
+                        <td>
+                            <button name="dns1" value="{{ dns.ips[0] }}" type="submit" 
+                                    formaction="/apply" 
+                                    formmethod="post" 
+                                    class="btn btn-sm btn-primary"
+                                    onclick="document.getElementById('hidden_dns2').value='{{ dns.ips[1] }}'">
+                                Apply
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <input type="hidden" name="dns2" id="hidden_dns2">
+        </form>
+
+        <a href="/reset" class="btn btn-outline-danger mt-3">Reset to Automatic (DHCP)</a>
+        <button class="btn btn-info mt-3" onclick="refreshDNS()">Refresh DNS Info</button>
+<ul class="list-group mt-2" id="dns-display"></ul>
+
+<script>
+  function refreshDNS() {
+    fetch('/refresh-dns')
+      .then(res => res.json())
+      .then(data => {
+        const list = document.getElementById("dns-display");
+        list.innerHTML = "";
+        data.dns.forEach(d => {
+          const li = document.createElement("li");
+          li.className = "list-group-item";
+          li.textContent = d;
+          list.appendChild(li);
+        });
+      });
+  }
+</script>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
